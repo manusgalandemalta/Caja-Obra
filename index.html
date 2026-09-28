@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1113">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Caja de obra">
+<title>Caja de obra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e1113;--card:#161a1d;--line:#262d33;--line2:#343c43;--sep:#22282d;
+  --tx:#e9ecee;--tx2:#c3cacf;--mut:#9ba6ae;--mut2:#88939b;
+  --acc:#62bdb2;--acc-lt:#9ad9d1;--acc-dk:#2c7f76;--acc-ink:#0b1f1d;--inc:#2a5550;
+  --warn:#e3a84b;--bad:#ee6b61;--bad-ink:#2a0d0b;--sel:#2c3338;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:'Barlow',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{padding:max(16px,env(safe-area-inset-top)) 16px 48px;font-variant-numeric:tabular-nums}
+button,input,textarea{font-family:inherit;font-size:16px}
+input,textarea{color-scheme:dark}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+[hidden]{display:none!important}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.num{font-family:'Barlow Semi Condensed',sans-serif;font-weight:600;line-height:1.1}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:16px;align-items:start}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+h1{margin:0;font-family:'Barlow Semi Condensed',sans-serif;font-size:28px;font-weight:700}
+h2{margin:0;font-size:17px;font-weight:600}
+.lbl{font-size:13px;color:var(--mut)}
+.sub{font-size:13px;color:var(--mut)}
+.field{display:flex;flex-direction:column;gap:6px}
+.inp{min-height:46px;padding:0 12px;border:1px solid var(--line2);border-radius:10px;background:var(--bg);color:var(--tx);width:100%}
+.inp.big{font-family:'Barlow Semi Condensed',sans-serif;font-size:22px;font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips.scroll{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}
+.chip{min-height:40px;padding:0 12px;border-radius:999px;font-size:14px;border:1px solid var(--line2);background:transparent;color:#d5dadd;white-space:nowrap;flex-shrink:0}
+.chip.sm{min-height:36px;font-size:13px}
+.chip[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.chip.add{border-style:dashed;border-color:#4a545c;color:var(--acc-lt)}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;background:var(--bg);border-radius:12px;padding:4px}
+.seg button{min-height:44px;border:0;border-radius:9px;font-weight:600;background:transparent;color:var(--mut);font-size:15px}
+.seg button[aria-pressed="true"]{background:var(--sel);color:#fff}
+.who{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.who .chip{min-height:44px;border-radius:10px;font-weight:600;letter-spacing:.04em;font-size:15px}
+.btn{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line2);background:transparent;color:var(--tx);font-weight:600;display:inline-flex;align-items:center;justify-content:center}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:700}
+.btn.dk{background:var(--acc-dk);border-color:var(--acc-dk);color:#fff}
+.btn.sm{min-height:36px;padding:0 12px;font-size:13px;font-weight:500;color:#d5dadd;border-radius:8px}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:var(--bad-ink)}
+.btn.ghost-acc{color:var(--acc-lt);font-weight:500;font-size:14px;min-height:40px;align-self:flex-start}
+.save{min-height:52px;font-size:17px}
+.err{font-size:14px;color:#f4a09a}
+.ok{font-size:14px;color:var(--acc-lt)}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:4px 0}
+.eyebrow{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.monthnav{display:flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px}
+.monthnav button{width:44px;height:44px;border:0;border-radius:8px;background:transparent;color:var(--tx);display:flex;align-items:center;justify-content:center}
+.monthnav .m{min-width:140px;text-align:center;font-weight:600}
+.kpi{gap:4px}
+.kpi .k{font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+.socios{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.socio{padding:14px;gap:6px}
+.donutwrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.donut{position:relative;width:168px;height:168px;border-radius:50%;flex-shrink:0;background:var(--line)}
+.donut .hole{position:absolute;inset:26px;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.legend{display:flex;flex-direction:column;gap:10px;flex-grow:1;min-width:140px}
+.lg{display:flex;align-items:center;gap:10px}
+.sw{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.bars{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-items:end;height:190px;border-bottom:1px solid var(--line2)}
+.bar{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%}
+.bar .pair{display:flex;align-items:flex-end;gap:3px;width:100%;justify-content:center}
+.bar .g,.bar .i{width:44%;max-width:20px;border-radius:4px 4px 0 0}
+.bar .g{background:var(--acc)}.bar .i{background:var(--inc)}
+.barlbls{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;text-align:center;font-size:12px;color:var(--mut)}
+.barlbls .cur{color:var(--tx);font-weight:700}
+.keyrow{display:flex;gap:12px;font-size:12px;color:var(--mut);flex-wrap:wrap}
+.keyrow span{display:flex;align-items:center;gap:6px}
+.keyrow i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.mov{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--sep)}
+.mov .d{width:44px;flex-shrink:0;text-align:center;padding-top:2px}
+.mov .body{flex-grow:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.mov .acts{display:flex;gap:6px;margin-top:4px}
+.mov .amt{font-size:20px;white-space:nowrap}
+.meter{height:10px;border-radius:999px;background:var(--line);overflow:hidden}
+.meter>div{height:100%;border-radius:999px}
+.brow{display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid var(--sep)}
+.spread{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.inline{display:flex;align-items:center;gap:8px}
+.inline .inp{min-height:40px;border-radius:8px}
+.newclient{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.newclient .inp{background:var(--card)}
+#login{max-width:380px;margin:12vh auto 0}
+.status{font-size:12px;color:var(--mut2);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mut2)}
+.dot.on{background:var(--acc)}.dot.off{background:var(--bad)}
+textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13px;min-height:160px}
+.visually-hidden{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<section id="login" class="card" hidden>
+  <div>
+    <div class="eyebrow">Dario · Tomás</div>
+    <h1>Caja de obra</h1>
+  </div>
+  <form id="loginForm" style="display:flex;flex-direction:column;gap:12px">
+    <div class="field"><label class="lbl" for="l-email">Mail</label><input class="inp" id="l-email" type="email" autocomplete="username" required></div>
+    <div class="field"><label class="lbl" for="l-pass">Contraseña</label><input class="inp" id="l-pass" type="password" autocomplete="current-password" required></div>
+    <div id="loginErr" class="err" role="alert"></div>
+    <button class="btn pri save" type="submit">Entrar</button>
+  </form>
+</section>
+
+<!-- ERROR DE CONFIGURACIÓN -->
+<section id="cfgErr" class="card" style="max-width:520px;margin:12vh auto 0" hidden>
+  <h2>Falta configurar Supabase</h2>
+  <div class="sub">Abrí <b>config.js</b> y pegá la URL y la clave anon/publishable de tu proyecto. Mirá el README.</div>
+</section>
+
+<!-- APP -->
+<div id="app" class="wrap" hidden>
+  <header class="top">
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div class="eyebrow" id="whoami">—</div>
+      <h1>Caja de obra</h1>
+      <div class="status"><span class="dot" id="syncDot"></span><span id="syncTxt">Conectando…</span> · <button type="button" data-act="logout" style="background:none;border:0;color:var(--mut);padding:0;font-size:12px;text-decoration:underline">Salir</button></div>
+    </div>
+    <div class="monthnav">
+      <button type="button" aria-label="Mes anterior" data-act="prevMonth"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="m" id="monthLabel"></div>
+      <button type="button" aria-label="Mes siguiente" data-act="nextMonth"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+    </div>
+  </header>
+
+  <div class="grid2">
+    <!-- FORMULARIO -->
+    <section class="card" aria-label="Cargar movimiento" id="formCard">
+      <div class="spread" style="align-items:center">
+        <h2 id="formTitle">Nuevo movimiento</h2>
+        <button type="button" class="btn sm" data-act="cancelEdit" id="cancelEdit" hidden>Cancelar</button>
+      </div>
+      <div class="seg" role="group" aria-label="Tipo">
+        <button type="button" data-act="type" data-v="gasto">Gasto</button>
+        <button type="button" data-act="type" data-v="ingreso">Ingreso</button>
+        <button type="button" data-act="type" data-v="comp" style="font-size:14px">Compensación</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+        <div class="field"><label class="lbl" for="f-amount">Monto ($)</label><input class="inp big" id="f-amount" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></div>
+        <div class="field"><label class="lbl" for="f-date">Fecha</label><input class="inp" id="f-date" type="date"></div>
+      </div>
+      <div id="notComp" style="display:flex;flex-direction:column;gap:14px">
+        <div class="field"><div class="lbl" id="catTitle">Categoría</div><div class="chips" id="catChips"></div></div>
+        <div class="field" id="subWrap" hidden><div class="lbl">Subcategoría (opcional)</div><div class="chips" id="subChips"></div></div>
+        <div class="field">
+          <div class="lbl" id="clientTitle">Cliente / obra</div>
+          <div class="chips" id="clientChips"></div>
+          <div class="newclient" id="newClient" hidden>
+            <label class="lbl" for="nc-name">Nombre del cliente / obra</label>
+            <input class="inp" id="nc-name" type="text" placeholder="Ej: Galpón Pérez">
+            <label class="lbl" for="nc-budget">Presupuesto estimado ($)</label>
+            <input class="inp" id="nc-budget" type="number" inputmode="decimal" min="0" placeholder="0">
+            <button type="button" class="btn dk" data-act="addClient">Agregar cliente</button>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="lbl" id="whoTitle">¿Quién hizo el gasto?</div>
+        <div class="who" id="whoChips"></div>
+        <div id="compNote" class="sub" style="color:var(--tx2)" hidden></div>
+      </div>
+      <div class="field"><label class="lbl" for="f-note">Nota (opcional)</label><input class="inp" id="f-note" type="text" placeholder="Detalle"></div>
+      <div id="formErr" class="err" role="alert"></div>
+      <button type="button" class="btn pri save" data-act="save" id="saveBtn">Cargar gasto</button>
+    </section>
+
+    <!-- RESUMEN -->
+    <section aria-label="Resumen del mes" style="display:flex;flex-direction:column;gap:12px">
+      <div class="card kpi"><div class="k">Ingresos del mes</div><div class="num" style="font-size:40px;color:var(--acc-lt)" id="kIng">$ 0</div></div>
+      <div class="card kpi"><div class="k">Gastos del mes</div><div class="num" style="font-size:40px" id="kGas">$ 0</div></div>
+      <div class="card kpi" id="kQuedaCard"><div class="k">Queda</div><div class="num" style="font-size:48px;font-weight:700" id="kQueda">$ 0</div></div>
+      <div class="socios" id="socios"></div>
+      <button type="button" class="btn ghost-acc" data-act="prefillSettle" id="settleBtn" hidden>Cargar esta compensación</button>
+      <div style="font-size:12px;color:var(--mut2);padding:0 4px">Saldo de cada socio = lo que cobró − lo que pagó ± compensaciones del mes. "A mano" es cuando los dos quedan con el mismo saldo.</div>
+    </section>
+  </div>
+
+  <div class="grid2" style="align-items:stretch">
+    <section class="card" aria-label="Gastos por categoría">
+      <h2>Gastos por categoría</h2>
+      <div class="donutwrap">
+        <div class="donut" id="donut"><div class="hole"><div style="font-size:12px;color:var(--mut)">Total</div><div class="num" style="font-size:20px" id="donutTotal">$ 0</div></div></div>
+        <div class="legend" id="legend"></div>
+      </div>
+    </section>
+    <section class="card" aria-label="Últimos 6 meses">
+      <div class="spread" style="align-items:center;flex-wrap:wrap">
+        <h2>Últimos 6 meses</h2>
+        <div class="keyrow"><span><i style="background:var(--acc)"></i>Gastos</span><span><i style="background:var(--inc)"></i>Ingresos</span></div>
+      </div>
+      <div class="bars" id="bars"></div>
+      <div class="barlbls" id="barLbls"></div>
+      <div class="sub" id="trend"></div>
+    </section>
+  </div>
+
+  <section class="card" aria-label="Movimientos del mes" style="gap:12px">
+    <div class="spread"><h2>Movimientos del mes</h2><div class="sub" id="listCount"></div></div>
+    <div class="field">
+      <div style="font-size:12px;color:var(--mut)">Categoría</div><div class="chips scroll" id="fCatChips"></div>
+      <div style="font-size:12px;color:var(--mut)">Cliente</div><div class="chips scroll" id="fClientChips"></div>
+    </div>
+    <div id="list"></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card" aria-label="Presupuesto por obra">
+      <div><h2>Presupuesto por obra</h2><div class="sub">Todo lo gastado en la obra (todos los meses) contra el presupuesto estimado.</div></div>
+      <div id="obras"></div>
+    </section>
+    <section class="card" aria-label="Topes por categoría">
+      <div><h2>Topes por categoría</h2><div class="sub">El tope es por trabajo. Elegí la obra para ver cuánto lleva cada categoría.</div></div>
+      <div class="chips scroll" id="capClientChips"></div>
+      <div id="topes"></div>
+      <div class="keyrow"><span><i style="background:var(--acc)"></i>En rango</span><span><i style="background:var(--warn)"></i>Más del 80%</span><span><i style="background:var(--bad)"></i>Pasado del tope</span></div>
+    </section>
+  </div>
+
+  <section class="card" aria-label="Respaldo">
+    <div><h2>Respaldo de datos</h2><div class="sub">Los datos viven en Supabase y se sincronizan solos entre los dos. Igual podés bajar un JSON de respaldo, o importar el que exportaste del lienzo de Claude.</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" class="btn dk" data-act="export">Exportar JSON</button>
+      <label class="btn" for="f-import" style="cursor:pointer">Importar JSON</label>
+      <input id="f-import" class="visually-hidden" type="file" accept="application/json,.json">
+    </div>
+    <div id="ioMsg" class="ok" role="status"></div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ---------- constantes ----------
+  const GC = [
+    { id: 'brian', label: 'Días Brian' },
+    { id: 'changa', label: 'Días changa extra' },
+    { id: 'materiales', label: 'Materiales' },
+    { id: 'viaticos', label: 'Viáticos y almuerzos' },
+    { id: 'acopios', label: 'Acopios' }
+  ];
+  const IC = [
+    { id: 'adelanto', label: 'Pago adelantado' },
+    { id: 'saldo', label: 'Pago saldo del trabajo' }
+  ];
+  const SUBS = ['Soldar', 'Corralón', 'Hierros', 'Otros'];
+  const SOCIOS = ['DARIO', 'TOMAS'];
+  const PAL = ['#a8e0d9', '#72c5bb', '#4aa69b', '#33867d', '#236660'];
+  const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const MESL = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const C = { acc: '#62bdb2', warn: '#e3a84b', bad: '#ee6b61', tx: '#e9ecee', mut: '#9ba6ae', accLt: '#9ad9d1' };
+
+  // ---------- utilidades ----------
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const shiftMonth = (ym, k) => { let y = +ym.slice(0, 4), m = +ym.slice(5, 7) - 1 + k; y += Math.floor(m / 12); m = ((m % 12) + 12) % 12; return y + '-' + String(m + 1).padStart(2, '0'); };
+  const fmt = (n) => (n < 0 ? '−' : '') + '$ ' + Math.round(Math.abs(n)).toLocaleString('es-AR');
+  const short = (n) => { const a = Math.abs(n); if (a >= 1e6) return '$ ' + (n / 1e6).toFixed(1).replace('.', ',') + 'M'; if (a >= 1e3) return '$ ' + Math.round(n / 1e3) + 'k'; return '$ ' + Math.round(n); };
+  const sum = (arr) => arr.reduce((a, m) => a + m.amount, 0);
+  const other = (n) => (n === 'DARIO' ? 'TOMAS' : 'DARIO');
+  const catLabel = (id) => id === 'comp' ? 'Compensación' : ((GC.concat(IC).find((c) => c.id === id) || {}).label || id || 'Sin categoría');
+  const clientName = (id) => { const c = S.clients.find((x) => x.id === id); return c ? c.name : (id ? 'Cliente borrado' : 'Sin cliente'); };
+  const status = (spent, cap) => {
+    const pct = cap > 0 ? spent / cap : (spent > 0 ? 2 : 0);
+    return { color: pct > 1 ? C.bad : (pct >= 0.8 ? C.warn : C.acc), w: Math.min(100, Math.round(pct * 100)), txt: cap > 0 ? Math.round(pct * 100) + '%' : 'sin tope' };
+  };
+  const chip = (label, pressed, act, v, cls) => `<button type="button" class="chip ${cls || ''}" aria-pressed="${pressed ? 'true' : 'false'}" data-act="${act}" data-v="${esc(v)}">${esc(label)}</button>`;
+
+  // ---------- estado ----------
+  const S = {
+    clients: [], movs: [], caps: {},
+    month: today().slice(0, 7),
+    form: { type: 'gasto', cat: 'brian', sub: '', client: '', who: 'DARIO' },
+    editingId: null, fCat: '', fClient: '', capClient: '', confirmDel: null,
+    me: null, user: null
+  };
+
+  // ---------- supabase ----------
+  const cfg = window.CAJA_CONFIG || {};
+  if (!window.supabase || !cfg.SUPABASE_URL || /TU-PROYECTO/.test(cfg.SUPABASE_URL) || !cfg.SUPABASE_ANON_KEY || /PEG/.test(cfg.SUPABASE_ANON_KEY)) {
+    $('cfgErr').hidden = false;
+    return;
+  }
+  const sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+
+  function setSync(state, txt) {
+    $('syncDot').className = 'dot ' + (state === 'on' ? 'on' : state === 'off' ? 'off' : '');
+    $('syncTxt').textContent = txt;
+  }
+  function fail(e, where) {
+    console.error(where, e);
+    setSync('off', 'Error: ' + (e && e.message ? e.message : where));
+  }
+
+  const fromRow = (r) => ({
+    id: r.id, type: r.tipo, amount: Number(r.monto) || 0, cat: r.categoria, sub: r.subcategoria || '',
+    date: r.fecha, note: r.nota || '', who: r.socio, client: r.cliente_id || ''
+  });
+  const toRow = (m) => ({
+    tipo: m.type, monto: m.amount, categoria: m.type === 'comp' ? 'comp' : m.cat,
+    subcategoria: m.type === 'gasto' && m.cat === 'materiales' && m.sub ? m.sub : null,
+    fecha: m.date, nota: m.note || null, socio: m.who, cliente_id: m.type === 'comp' ? null : (m.client || null)
+  });
+
+  async function loadAll() {
+    setSync('', 'Sincronizando…');
+    const [c, t, m] = await Promise.all([
+      sb.from('clientes').select('*').order('created_at'),
+      sb.from('topes').select('*'),
+      sb.from('movimientos').select('*').order('fecha').limit(10000)
+    ]);
+    const e = c.error || t.error || m.error;
+    if (e) return fail(e, 'cargar');
+    S.clients = c.data.map((r) => ({ id: r.id, name: r.nombre, budget: Number(r.presupuesto) || 0 }));
+    S.caps = {}; t.data.forEach((r) => { S.caps[r.categoria] = Number(r.tope) || 0; });
+    S.movs = m.data.map(fromRow);
+    setSync('on', 'Sincronizado');
+    renderAll();
+  }
+
+  let reloadTimer = null;
+  const scheduleReload = () => { clearTimeout(reloadTimer); reloadTimer = setTimeout(loadAll, 300); };
+  let channel = null;
+  function subscribe() {
+    if (channel) return;
+    channel = sb.channel('caja')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'movimientos' }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'topes' }, scheduleReload)
+      .subscribe();
+  }
+
+  async function enter(session) {
+    S.user = session.user;
+    const res = await sb.from('socios').select('email, nombre');
+    const mail = (session.user.email || '').toLowerCase();
+    const data = (res.data || []).find((r) => String(r.email).toLowerCase() === mail);
+    if (res.error || !data) {
+      await sb.auth.signOut();
+      $('app').hidden = true; $('login').hidden = false;
+      $('loginErr').textContent = 'Este mail no está habilitado como socio. Revisá la tabla "socios" en Supabase.';
+      return;
+    }
+    S.me = data.nombre;
+    S.form.who = S.me;
+    $('whoami').textContent = 'Hola, ' + S.me;
+    $('login').hidden = true; $('app').hidden = false;
+    resetForm();
+    await loadAll();
+    subscribe();
+  }
+
+  $('loginForm').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    $('loginErr').textContent = '';
+    const { data, error } = await sb.auth.signInWithPassword({ email: $('l-email').value.trim(), password: $('l-pass').value });
+    if (error) { $('loginErr').textContent = error.message === 'Invalid login credentials' ? 'Mail o contraseña incorrectos.' : error.message; return; }
+    enter(data.session);
+  });
+
+  // ---------- formulario ----------
+  function defaultCat(type) { return type === 'gasto' ? 'brian' : (type === 'ingreso' ? 'adelanto' : 'comp'); }
+  function resetForm(keep) {
+    const k = keep || {};
+    S.editingId = null;
+    S.form = { type: k.type || 'gasto', cat: k.cat || defaultCat(k.type || 'gasto'), sub: '', client: k.client || '', who: k.who || S.me || 'DARIO' };
+    $('f-amount').value = ''; $('f-note').value = '';
+    $('f-date').value = k.date || today();
+    $('formErr').textContent = '';
+    renderForm();
+  }
+  function setType(t) {
+    if (S.form.type === t) return;
+    S.form.type = t; S.form.cat = defaultCat(t); S.form.sub = '';
+    if (t === 'ingreso' && !S.form.client && S.clients[0]) S.form.client = S.clients[0].id;
+    $('formErr').textContent = '';
+    renderForm();
+  }
+  function renderForm() {
+    const f = S.form, isC = f.type === 'comp';
+    document.querySelectorAll('.seg button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.v === f.type ? 'true' : 'false'));
+    $('formTitle').textContent = S.editingId ? 'Editar movimiento' : 'Nuevo movimiento';
+    $('cancelEdit').hidden = !S.editingId;
+    $('saveBtn').textContent = S.editingId ? 'Guardar cambios' : (f.type === 'gasto' ? 'Cargar gasto' : f.type === 'ingreso' ? 'Cargar ingreso' : 'Cargar compensación');
+    $('notComp').hidden = isC;
+    $('catTitle').textContent = f.type === 'gasto' ? 'Categoría' : 'Forma de ingreso';
+    $('clientTitle').textContent = f.type === 'gasto' ? 'Cliente / obra' : '¿De quién viene el pago?';
+    $('whoTitle').textContent = f.type === 'gasto' ? '¿Quién hizo el gasto?' : f.type === 'ingreso' ? '¿Quién cobró?' : '¿Quién da la plata?';
+    $('catChips').innerHTML = (f.type === 'gasto' ? GC : IC).map((c) => chip(c.label, f.cat === c.id, 'cat', c.id)).join('');
+    $('subWrap').hidden = !(f.type === 'gasto' && f.cat === 'materiales');
+    $('subChips').innerHTML = SUBS.map((x) => chip(x, f.sub === x, 'sub', x)).join('');
+    const opts = (f.type === 'gasto' ? [{ id: '', name: 'Sin cliente' }] : []).concat(S.clients);
+    $('clientChips').innerHTML = opts.map((c) => chip(c.name, f.client === c.id, 'client', c.id)).join('') + '<button type="button" class="chip add" data-act="toggleNewClient">+ Cliente</button>';
+    $('whoChips').innerHTML = SOCIOS.map((n) => chip(n, f.who === n, 'who', n)).join('');
+    $('compNote').hidden = !isC;
+    $('compNote').innerHTML = 'Se la da a <b style="color:var(--tx)">' + other(f.who) + '</b>. No cuenta como gasto ni ingreso, solo mueve el saldo entre socios.';
+  }
+
+  async function save() {
+    const f = S.form, amount = Number($('f-amount').value), date = $('f-date').value;
+    const err = (t) => { $('formErr').textContent = t; };
+    if (!(amount > 0)) return err('Poné un monto mayor a cero.');
+    if (!date) return err('Elegí una fecha.');
+    if (f.type === 'ingreso' && !f.client) return err('Indicá de qué cliente viene el pago.');
+    const mov = { type: f.type, amount, cat: f.cat, sub: f.sub, date, note: $('f-note').value.trim(), who: f.who, client: f.client };
+    $('saveBtn').disabled = true;
+    const q = S.editingId ? sb.from('movimientos').update(toRow(mov)).eq('id', S.editingId) : sb.from('movimientos').insert(toRow(mov));
+    const { error } = await q;
+    $('saveBtn').disabled = false;
+    if (error) return err('No se pudo guardar: ' + error.message);
+    S.month = date.slice(0, 7);
+    resetForm({ type: f.type, cat: f.cat, who: f.who, client: f.client, date });
+    loadAll();
+  }
+
+  function startEdit(id) {
+    const m = S.movs.find((x) => x.id === id); if (!m) return;
+    S.editingId = id; S.confirmDel = null;
+    S.form = { type: m.type, cat: m.cat, sub: m.sub, client: m.client, who: m.who };
+    $('f-amount').value = String(m.amount); $('f-date').value = m.date; $('f-note').value = m.note;
+    $('formErr').textContent = '';
+    renderForm(); renderList();
+    $('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function del(id) {
+    if (S.confirmDel !== id) { S.confirmDel = id; return renderList(); }
+    S.confirmDel = null;
+    const { error } = await sb.from('movimientos').delete().eq('id', id);
+    if (error) return fail(error, 'borrar');
+    if (S.editingId === id) resetForm();
+    loadAll();
+  }
+
+  async function addClient() {
+    const name = $('nc-name').value.trim();
+    if (!name) { $('formErr').textContent = 'Poné el nombre del cliente.'; return; }
+    const budget = Math.max(0, Number($('nc-budget').value) || 0);
+    const { data, error } = await sb.from('clientes').insert({ nombre: name, presupuesto: budget }).select().single();
+    if (error) { $('formErr').textContent = 'No se pudo crear el cliente: ' + error.message; return; }
+    $('nc-name').value = ''; $('nc-budget').value = ''; $('newClient').hidden = true; $('formErr').textContent = '';
+    S.clients.push({ id: data.id, name: data.nombre, budget: Number(data.presupuesto) || 0 });
+    S.form.client = data.id;
+    renderAll();
+  }
+
+  // ---------- render ----------
+  function monthMovs() { return S.movs.filter((m) => m.date.slice(0, 7) === S.month); }
+
+  function settleInfo(inMonth) {
+    const sb2 = SOCIOS.map((n) => {
+      const i = sum(inMonth.filter((m) => m.type === 'ingreso' && m.who === n));
+      const g = sum(inMonth.filter((m) => m.type === 'gasto' && m.who === n));
+      const dio = sum(inMonth.filter((m) => m.type === 'comp' && m.who === n));
+      const rec = sum(inMonth.filter((m) => m.type === 'comp' && m.who !== n));
+      return { name: n, i, g, dio, rec, saldo: i - g - dio + rec };
+    });
+    const amount = Math.round(Math.abs(sb2[0].saldo - sb2[1].saldo) / 2);
+    const payer = sb2[0].saldo > sb2[1].saldo ? sb2[0].name : sb2[1].name;
+    return { list: sb2, amount, payer, payee: other(payer), can: amount >= 1 };
+  }
+
+  function renderSummary(inMonth) {
+    const ing = sum(inMonth.filter((m) => m.type === 'ingreso'));
+    const gas = sum(inMonth.filter((m) => m.type === 'gasto'));
+    const q = ing - gas;
+    $('kIng').textContent = fmt(ing); $('kGas').textContent = fmt(gas); $('kQueda').textContent = fmt(q);
+    $('kQueda').style.color = q < 0 ? C.bad : C.tx;
+    $('kQuedaCard').style.borderColor = q < 0 ? '#7a2f2a' : '';
+    const st = settleInfo(inMonth);
+    $('socios').innerHTML = st.list.map((p) => {
+      let hint, col = C.accLt;
+      if (!st.can) { hint = 'A mano con el otro socio'; col = C.mut; }
+      else if (p.name === st.payer) { hint = 'Le da ' + fmt(st.amount) + ' a ' + st.payee; col = C.warn; }
+      else hint = 'Recibe ' + fmt(st.amount) + ' de ' + st.payer;
+      const parts = []; if (p.dio) parts.push('Dio ' + fmt(p.dio)); if (p.rec) parts.push('Recibió ' + fmt(p.rec));
+      return `<div class="card socio"><div style="font-size:13px;font-weight:600;letter-spacing:.06em">${p.name}</div>
+        <div class="num" style="font-size:26px;color:${p.saldo < 0 ? C.bad : C.tx}">${fmt(p.saldo)}</div>
+        <div style="font-size:12px;color:${col};line-height:1.35">${hint}</div>
+        <div class="sub" style="line-height:1.4">Cobró ${fmt(p.i)}<br>Pagó ${fmt(p.g)}</div>
+        ${parts.length ? `<div style="font-size:12px;color:var(--mut);line-height:1.4">${parts.join(' · ')} en compensación</div>` : ''}</div>`;
+    }).join('');
+    $('settleBtn').hidden = !st.can;
+    S._settle = st;
+    return gas;
+  }
+
+  function renderDonut(inMonth, gas) {
+    const g = inMonth.filter((m) => m.type === 'gasto');
+    const byCat = GC.map((c) => ({ label: c.label, total: sum(g.filter((m) => m.cat === c.id)) })).filter((c) => c.total > 0).sort((a, b) => b.total - a.total);
+    let acc = 0; const stops = [];
+    $('legend').innerHTML = byCat.length ? byCat.map((c, i) => {
+      const p = gas > 0 ? c.total / gas * 100 : 0, col = PAL[i % PAL.length];
+      stops.push(`${col} ${acc.toFixed(2)}% ${(acc + p).toFixed(2)}%`); acc += p;
+      return `<div class="lg"><span class="sw" style="background:${col}"></span><div style="flex-grow:1;font-size:14px;line-height:1.25">${esc(c.label)}<div style="font-size:12px;color:var(--mut)">${fmt(c.total)}</div></div><div class="num" style="font-size:18px">${Math.round(p)}%</div></div>`;
+    }).join('') : '<div class="sub" style="font-size:14px">Sin gastos este mes.</div>';
+    $('donut').style.background = stops.length ? `conic-gradient(${stops.join(', ')})` : '';
+    $('donutTotal').textContent = short(gas);
+  }
+
+  function renderBars(gas) {
+    const months = [5, 4, 3, 2, 1, 0].map((k) => shiftMonth(S.month, -k));
+    const tot = months.map((ym) => { const ms = S.movs.filter((m) => m.date.slice(0, 7) === ym); return { ym, g: sum(ms.filter((m) => m.type === 'gasto')), i: sum(ms.filter((m) => m.type === 'ingreso')) }; });
+    const max = Math.max(1, ...tot.map((t) => Math.max(t.g, t.i)));
+    $('bars').innerHTML = tot.map((t) => `<div class="bar"><div style="font-size:11px;color:var(--tx2)">${t.g > 0 ? short(t.g).replace('$ ', '') : ''}</div><div class="pair"><div class="g" style="height:${Math.round(t.g / max * 150)}px"></div><div class="i" style="height:${Math.round(t.i / max * 150)}px"></div></div></div>`).join('');
+    $('barLbls').innerHTML = tot.map((t, i) => `<div class="${i === 5 ? 'cur' : ''}">${MES[+t.ym.slice(5, 7) - 1]}</div>`).join('');
+    const prev = tot[4].g;
+    let tr;
+    if (prev <= 0) tr = 'Sin gastos el mes anterior para comparar.';
+    else { const d = Math.round((gas - prev) / prev * 100); tr = d === 0 ? 'Gastos iguales al mes anterior.' : 'Venís gastando ' + Math.abs(d) + '% ' + (d > 0 ? 'más' : 'menos') + ' que el mes anterior.'; }
+    $('trend').textContent = tr;
+  }
+
+  function renderList() {
+    const inMonth = monthMovs();
+    $('fCatChips').innerHTML = [{ id: '', label: 'Todas' }].concat(GC, IC, [{ id: 'comp', label: 'Compensaciones' }]).map((c) => chip(c.label, S.fCat === c.id, 'fCat', c.id, 'sm')).join('');
+    $('fClientChips').innerHTML = [{ id: '', name: 'Todos' }, { id: '__none', name: 'Sin cliente' }].concat(S.clients).map((c) => chip(c.name, S.fClient === c.id, 'fClient', c.id, 'sm')).join('');
+    const list = inMonth.filter((m) => {
+      if (S.fCat && m.cat !== S.fCat) return false;
+      if (S.fClient === '__none' && m.client) return false;
+      if (S.fClient && S.fClient !== '__none' && m.client !== S.fClient) return false;
+      return true;
+    }).sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
+    $('listCount').textContent = list.length + (list.length === 1 ? ' movimiento' : ' movimientos');
+    $('list').innerHTML = list.length ? list.map((m) => {
+      const isC = m.type === 'comp', conf = S.confirmDel === m.id;
+      const title = catLabel(m.cat) + (m.sub ? ' · ' + m.sub : '');
+      const meta = isC ? m.who + ' → ' + other(m.who) + ' · entre socios' : clientName(m.client) + ' · ' + m.who;
+      const amt = isC ? '⇄ ' + fmt(m.amount) : (m.type === 'ingreso' ? '+' : '−') + fmt(m.amount);
+      const col = m.type === 'ingreso' ? C.accLt : isC ? C.mut : C.tx;
+      return `<div class="mov"><div class="d"><div class="num" style="font-size:22px;line-height:1">${+m.date.slice(8, 10)}</div><div style="font-size:11px;color:var(--mut);text-transform:uppercase">${MES[+m.date.slice(5, 7) - 1]}</div></div>
+        <div class="body"><div style="font-size:15px;font-weight:600">${esc(title)}</div><div class="sub">${esc(meta)}</div>${m.note ? `<div style="font-size:13px;color:var(--tx2)">${esc(m.note)}</div>` : ''}
+        <div class="acts"><button type="button" class="btn sm" data-act="edit" data-v="${m.id}">Editar</button><button type="button" class="btn sm ${conf ? 'danger' : ''}" data-act="del" data-v="${m.id}">${conf ? '¿Seguro? Borrar' : 'Borrar'}</button></div></div>
+        <div class="num amt" style="color:${col}">${amt}</div></div>`;
+    }).join('') : '<div class="sub" style="padding:20px 0;border-top:1px solid var(--sep);font-size:14px">No hay movimientos con estos filtros.</div>';
+  }
+
+  function renderBudgets() {
+    $('obras').innerHTML = S.clients.length ? S.clients.map((c) => {
+      const mine = S.movs.filter((m) => m.client === c.id);
+      const spent = sum(mine.filter((m) => m.type === 'gasto')), cob = sum(mine.filter((m) => m.type === 'ingreso'));
+      const st = status(spent, c.budget);
+      return `<div class="brow"><div class="spread"><div style="font-size:15px;font-weight:600">${esc(c.name)}</div><div class="num" style="font-size:18px;color:${st.color}">${st.txt}</div></div>
+        <div class="meter"><div style="width:${st.w}%;background:${st.color}"></div></div>
+        <div class="sub">Gastado ${fmt(spent)} de ${fmt(c.budget)} · Cobrado ${fmt(cob)}</div>
+        <div class="inline"><label class="lbl" for="b-${c.id}" style="white-space:nowrap">Presupuesto $</label><input class="inp" id="b-${c.id}" type="number" inputmode="decimal" min="0" value="${c.budget || ''}" data-budget="${c.id}" style="flex-grow:1;min-width:0">
+        ${mine.length ? '' : `<button type="button" class="btn sm" data-act="delClient" data-v="${c.id}" aria-label="Borrar cliente ${esc(c.name)}">Borrar</button>`}</div></div>`;
+    }).join('') : '<div class="sub">Todavía no hay clientes. Agregá uno desde el formulario con "+ Cliente".</div>';
+
+    const cc = S.clients.some((c) => c.id === S.capClient) ? S.capClient : (S.clients[0] ? S.clients[0].id : '');
+    $('capClientChips').innerHTML = S.clients.map((c) => chip(c.name, cc === c.id, 'capClient', c.id, 'sm')).join('');
+    $('topes').innerHTML = cc ? GC.map((c) => {
+      const spent = sum(S.movs.filter((m) => m.type === 'gasto' && m.client === cc && m.cat === c.id));
+      const cap = S.caps[c.id] || 0, st = status(spent, cap);
+      return `<div class="brow"><div class="spread"><div style="font-size:15px;font-weight:600">${esc(c.label)}</div><div style="font-size:13px;font-weight:600;color:${st.color}">${st.txt}</div></div>
+        <div class="meter"><div style="width:${st.w}%;background:${st.color}"></div></div>
+        <div class="inline"><div class="sub" style="flex-grow:1">Lleva ${fmt(spent)}</div><label class="lbl" for="cap-${c.id}">Tope $</label><input class="inp" id="cap-${c.id}" type="number" inputmode="decimal" min="0" value="${cap || ''}" data-cap="${c.id}" style="width:130px"></div></div>`;
+    }).join('') : '';
+  }
+
+  function renderAll() {
+    const ym = S.month;
+    $('monthLabel').textContent = MESL[+ym.slice(5, 7) - 1] + ' ' + ym.slice(0, 4);
+    const inMonth = monthMovs();
+    const gas = renderSummary(inMonth);
+    renderDonut(inMonth, gas);
+    renderBars(gas);
+    renderList();
+    renderBudgets();
+    renderForm();
+  }
+
+  // ---------- export / import ----------
+  function exportJson() {
+    const txt = JSON.stringify({
+      app: 'caja-obra', version: 2, exportedAt: new Date().toISOString(),
+      clients: S.clients, caps: S.caps,
+      movs: S.movs.map((m) => Object.assign({}, m, m.type === 'comp' ? { to: other(m.who) } : {}))
+    }, null, 2);
+    const url = URL.createObjectURL(new Blob([txt], { type: 'application/json' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'caja-obra-' + today() + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    $('ioMsg').textContent = 'Listo, se descargó el respaldo.';
+  }
+
+  async function importJson(txt) {
+    const msg = (t) => { $('ioMsg').textContent = t; };
+    let d;
+    try { d = JSON.parse(txt); } catch (e) { return msg('El archivo no es un JSON válido.'); }
+    if (!d || !Array.isArray(d.movs) || !Array.isArray(d.clients)) return msg('Este JSON no parece un respaldo de la caja de obra.');
+    const movs = d.movs.filter((m) => m && m.date && ['gasto', 'ingreso', 'comp'].includes(m.type) && Number(m.amount) > 0);
+    if (!confirm(`Se van a AGREGAR ${d.clients.length} clientes y ${movs.length} movimientos a la base compartida. Los que ya están no se tocan. ¿Seguimos?`)) return;
+    msg('Importando…');
+    // clientes: si ya existe uno con el mismo nombre, se reutiliza
+    const idMap = {};
+    for (const c of d.clients) {
+      if (!c || !c.name) continue;
+      const found = S.clients.find((x) => x.name.trim().toLowerCase() === String(c.name).trim().toLowerCase());
+      if (found) { idMap[c.id] = found.id; continue; }
+      const { data, error } = await sb.from('clientes').insert({ nombre: String(c.name), presupuesto: Math.max(0, Number(c.budget) || 0) }).select().single();
+      if (error) return msg('Error creando clientes: ' + error.message);
+      idMap[c.id] = data.id;
+      S.clients.push({ id: data.id, name: data.nombre, budget: Number(data.presupuesto) || 0 });
+    }
+    if (d.caps && typeof d.caps === 'object') {
+      const rows = Object.keys(d.caps).filter((k) => GC.some((c) => c.id === k)).map((k) => ({ categoria: k, tope: Math.max(0, Number(d.caps[k]) || 0) }));
+      if (rows.length) { const { error } = await sb.from('topes').upsert(rows); if (error) return msg('Error con los topes: ' + error.message); }
+    }
+    const rows = movs.map((m) => toRow({
+      type: m.type, amount: Number(m.amount), cat: m.cat, sub: m.sub || '', date: String(m.date).slice(0, 10),
+      note: m.note || '', who: m.who === 'TOMAS' ? 'TOMAS' : 'DARIO', client: m.client ? (idMap[m.client] || '') : ''
+    })).filter((r) => r.tipo !== 'ingreso' || r.cliente_id);
+    for (let i = 0; i < rows.length; i += 500) {
+      const { error } = await sb.from('movimientos').insert(rows.slice(i, i + 500));
+      if (error) return msg('Error importando movimientos: ' + error.message);
+    }
+    msg(`Importados ${rows.length} movimientos.`);
+    loadAll();
+  }
+
+  $('f-import').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0]; if (!file) return;
+    const r = new FileReader(); r.onload = () => importJson(String(r.result || '')); r.readAsText(file);
+    e.target.value = '';
+  });
+
+  // ---------- eventos ----------
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act]'); if (!b) return;
+    const v = b.dataset.v, f = S.form;
+    switch (b.dataset.act) {
+      case 'type': setType(v); break;
+      case 'cat': f.cat = v; if (v !== 'materiales') f.sub = ''; renderForm(); break;
+      case 'sub': f.sub = f.sub === v ? '' : v; renderForm(); break;
+      case 'client': f.client = v; renderForm(); break;
+      case 'who': f.who = v; renderForm(); break;
+      case 'toggleNewClient': $('newClient').hidden = !$('newClient').hidden; if (!$('newClient').hidden) $('nc-name').focus(); break;
+      case 'addClient': addClient(); break;
+      case 'save': save(); break;
+      case 'cancelEdit': resetForm({ type: f.type }); break;
+      case 'prevMonth': S.month = shiftMonth(S.month, -1); S.confirmDel = null; renderAll(); break;
+      case 'nextMonth': S.month = shiftMonth(S.month, 1); S.confirmDel = null; renderAll(); break;
+      case 'fCat': S.fCat = v; renderList(); break;
+      case 'fClient': S.fClient = v; renderList(); break;
+      case 'capClient': S.capClient = v; renderBudgets(); break;
+      case 'edit': startEdit(v); break;
+      case 'del': del(v); break;
+      case 'delClient': sb.from('clientes').delete().eq('id', v).then(({ error }) => error ? fail(error, 'borrar cliente') : loadAll()); break;
+      case 'prefillSettle': {
+        const st = S._settle; if (!st || !st.can) break;
+        resetForm({ type: 'comp', who: st.payer });
+        $('f-amount').value = String(st.amount); $('f-note').value = 'Para quedar a mano';
+        $('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        break;
+      }
+      case 'export': exportJson(); break;
+      case 'logout': sb.auth.signOut().then(() => location.reload()); break;
+    }
+  });
+
+  document.addEventListener('change', async (e) => {
+    const t = e.target;
+    if (t.dataset.budget) {
+      const { error } = await sb.from('clientes').update({ presupuesto: Math.max(0, Number(t.value) || 0) }).eq('id', t.dataset.budget);
+      if (error) return fail(error, 'presupuesto');
+      loadAll();
+    } else if (t.dataset.cap) {
+      const { error } = await sb.from('topes').upsert({ categoria: t.dataset.cap, tope: Math.max(0, Number(t.value) || 0) });
+      if (error) return fail(error, 'tope');
+      loadAll();
+    }
+  });
+
+  // ---------- arranque ----------
+  sb.auth.getSession().then(({ data }) => {
+    if (data.session) enter(data.session);
+    else $('login').hidden = false;
+  });
+})();
+</script>
+</body>
+</html>
