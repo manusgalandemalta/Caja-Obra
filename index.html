@@ -161,10 +161,13 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
         <div class="field">
           <div class="lbl" id="clientTitle">Cliente / obra</div>
           <div class="chips" id="clientChips"></div>
+          <div id="clientDebt" style="font-size:14px" hidden></div>
           <div class="newclient" id="newClient" hidden>
             <label class="lbl" for="nc-name">Nombre del cliente / obra</label>
             <input class="inp" id="nc-name" type="text" placeholder="Ej: Galpón Pérez">
-            <label class="lbl" for="nc-budget">Presupuesto estimado ($)</label>
+            <label class="lbl" for="nc-price">Presupuesto al cliente — lo que le cobran ($)</label>
+            <input class="inp" id="nc-price" type="number" inputmode="decimal" min="0" placeholder="0">
+            <label class="lbl" for="nc-budget">Presupuesto de gastos — lo que calculan gastar ($)</label>
             <input class="inp" id="nc-budget" type="number" inputmode="decimal" min="0" placeholder="0">
             <button type="button" class="btn dk" data-act="addClient">Agregar cliente</button>
           </div>
@@ -185,6 +188,7 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
       <div class="card kpi"><div class="k">Ingresos del mes</div><div class="num" style="font-size:40px;color:var(--acc-lt)" id="kIng">$ 0</div></div>
       <div class="card kpi"><div class="k">Gastos del mes</div><div class="num" style="font-size:40px" id="kGas">$ 0</div></div>
       <div class="card kpi" id="kQuedaCard"><div class="k">Queda</div><div class="num" style="font-size:48px;font-weight:700" id="kQueda">$ 0</div></div>
+      <div class="card kpi"><div class="k">Por cobrar (todas las obras)</div><div class="num" style="font-size:32px;color:var(--warn)" id="kCobrar">$ 0</div><div class="sub" id="kCobrarSub"></div></div>
       <div class="socios" id="socios"></div>
       <button type="button" class="btn ghost-acc" data-act="prefillSettle" id="settleBtn" hidden>Cargar esta compensación</button>
       <div style="font-size:12px;color:var(--mut2);padding:0 4px">Saldo de cada socio = lo que cobró − lo que pagó ± compensaciones del mes. "A mano" es cuando los dos quedan con el mismo saldo.</div>
@@ -220,14 +224,16 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
   </section>
 
   <div class="grid2">
-    <section class="card" aria-label="Presupuesto por obra">
-      <div><h2>Presupuesto por obra</h2><div class="sub">Todo lo gastado en la obra (todos los meses) contra el presupuesto estimado.</div></div>
+    <section class="card" aria-label="Obras">
+      <div><h2>Obras: cobros y gastos</h2><div class="sub">Suma todos los meses. Cobrado contra lo presupuestado al cliente, y gastado contra el presupuesto de gastos.</div></div>
+      <div class="chips scroll" id="obraFilter"></div>
       <div id="obras"></div>
     </section>
     <section class="card" aria-label="Topes por categoría">
-      <div><h2>Topes por categoría</h2><div class="sub">El tope es por trabajo. Elegí la obra para ver cuánto lleva cada categoría.</div></div>
+      <div><h2>Topes por categoría</h2><div class="sub">Cada obra tiene sus propios topes. Elegí la obra, cargá el tope de cada categoría y mirá cuánto lleva gastado en esa obra.</div></div>
       <div class="chips scroll" id="capClientChips"></div>
       <div id="topes"></div>
+      <div class="sub" id="capSum" hidden></div>
       <div class="keyrow"><span><i style="background:var(--acc)"></i>En rango</span><span><i style="background:var(--warn)"></i>Más del 80%</span><span><i style="background:var(--bad)"></i>Pasado del tope</span></div>
     </section>
   </div>
@@ -282,7 +288,7 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
     clients: [], movs: [], caps: {},
     month: today().slice(0, 7),
     form: { type: 'gasto', cat: 'brian', sub: '', client: '', who: 'DARIO' },
-    editingId: null, fCat: '', fClient: '', capClient: '', confirmDel: null,
+    editingId: null, fCat: '', fClient: '', capClient: '', confirmDel: null, obraFilter: '',
     me: null, user: null
   };
 
@@ -313,17 +319,20 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
     fecha: m.date, nota: m.note || null, socio: m.who, cliente_id: m.type === 'comp' ? null : (m.client || null)
   });
 
+  const mapClient = (r) => ({ id: r.id, name: r.nombre, price: Number(r.presupuesto) || 0, budget: Number(r.presupuesto_gastos) || 0 });
+  const clientTotals = (id) => { const mine = S.movs.filter((m) => m.client === id); return { mine, spent: sum(mine.filter((m) => m.type === 'gasto')), cob: sum(mine.filter((m) => m.type === 'ingreso')) }; };
+
   async function loadAll() {
     setSync('', 'Sincronizando…');
     const [c, t, m] = await Promise.all([
       sb.from('clientes').select('*').order('created_at'),
-      sb.from('topes').select('*'),
+      sb.from('topes_obra').select('*'),
       sb.from('movimientos').select('*').order('fecha').limit(10000)
     ]);
     const e = c.error || t.error || m.error;
     if (e) return fail(e, 'cargar');
-    S.clients = c.data.map((r) => ({ id: r.id, name: r.nombre, budget: Number(r.presupuesto) || 0 }));
-    S.caps = {}; t.data.forEach((r) => { S.caps[r.categoria] = Number(r.tope) || 0; });
+    S.clients = c.data.map(mapClient);
+    S.caps = {}; t.data.forEach((r) => { (S.caps[r.cliente_id] = S.caps[r.cliente_id] || {})[r.categoria] = Number(r.tope) || 0; });
     S.movs = m.data.map(fromRow);
     setSync('on', 'Sincronizado');
     renderAll();
@@ -337,7 +346,7 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
     channel = sb.channel('caja')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'movimientos' }, scheduleReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, scheduleReload)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'topes' }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'topes_obra' }, scheduleReload)
       .subscribe();
   }
 
@@ -402,6 +411,14 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
     $('subChips').innerHTML = SUBS.map((x) => chip(x, f.sub === x, 'sub', x)).join('');
     const opts = (f.type === 'gasto' ? [{ id: '', name: 'Sin cliente' }] : []).concat(S.clients);
     $('clientChips').innerHTML = opts.map((c) => chip(c.name, f.client === c.id, 'client', c.id)).join('') + '<button type="button" class="chip add" data-act="toggleNewClient">+ Cliente</button>';
+    const cd = $('clientDebt');
+    if (f.type === 'ingreso' && f.client) {
+      const cl = S.clients.find((x) => x.id === f.client), t = clientTotals(f.client);
+      cd.hidden = false;
+      if (!cl || cl.price <= 0) { cd.style.color = C.mut; cd.textContent = 'Cobrado hasta hoy: ' + fmt(t.cob) + ' (la obra no tiene presupuesto al cliente cargado)'; }
+      else if (cl.price - t.cob > 0) { cd.style.color = C.warn; cd.textContent = 'Este cliente debe ' + fmt(cl.price - t.cob) + ' de ' + fmt(cl.price) + '.'; }
+      else { cd.style.color = C.accLt; cd.textContent = 'Este cliente ya pagó todo (' + fmt(t.cob) + ').'; }
+    } else cd.hidden = true;
     $('whoChips').innerHTML = SOCIOS.map((n) => chip(n, f.who === n, 'who', n)).join('');
     $('compNote').hidden = !isC;
     $('compNote').innerHTML = 'Se la da a <b style="color:var(--tx)">' + other(f.who) + '</b>. No cuenta como gasto ni ingreso, solo mueve el saldo entre socios.';
@@ -446,11 +463,12 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
   async function addClient() {
     const name = $('nc-name').value.trim();
     if (!name) { $('formErr').textContent = 'Poné el nombre del cliente.'; return; }
+    const price = Math.max(0, Number($('nc-price').value) || 0);
     const budget = Math.max(0, Number($('nc-budget').value) || 0);
-    const { data, error } = await sb.from('clientes').insert({ nombre: name, presupuesto: budget }).select().single();
+    const { data, error } = await sb.from('clientes').insert({ nombre: name, presupuesto: price, presupuesto_gastos: budget }).select().single();
     if (error) { $('formErr').textContent = 'No se pudo crear el cliente: ' + error.message; return; }
-    $('nc-name').value = ''; $('nc-budget').value = ''; $('newClient').hidden = true; $('formErr').textContent = '';
-    S.clients.push({ id: data.id, name: data.nombre, budget: Number(data.presupuesto) || 0 });
+    $('nc-name').value = ''; $('nc-price').value = ''; $('nc-budget').value = ''; $('newClient').hidden = true; $('formErr').textContent = '';
+    S.clients.push(mapClient(data));
     S.form.client = data.id;
     renderAll();
   }
@@ -478,6 +496,10 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
     $('kIng').textContent = fmt(ing); $('kGas').textContent = fmt(gas); $('kQueda').textContent = fmt(q);
     $('kQueda').style.color = q < 0 ? C.bad : C.tx;
     $('kQuedaCard').style.borderColor = q < 0 ? '#7a2f2a' : '';
+    let porCobrar = 0, deben = 0;
+    S.clients.forEach((c) => { const d = c.price - clientTotals(c.id).cob; if (c.price > 0 && d > 0) { porCobrar += d; deben++; } });
+    $('kCobrar').textContent = fmt(porCobrar);
+    $('kCobrarSub').textContent = deben ? (deben === 1 ? '1 obra debe plata' : deben + ' obras deben plata') : 'Nadie debe nada';
     const st = settleInfo(inMonth);
     $('socios').innerHTML = st.list.map((p) => {
       let hint, col = C.accLt;
@@ -547,26 +569,54 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
   }
 
   function renderBudgets() {
-    $('obras').innerHTML = S.clients.length ? S.clients.map((c) => {
-      const mine = S.movs.filter((m) => m.client === c.id);
-      const spent = sum(mine.filter((m) => m.type === 'gasto')), cob = sum(mine.filter((m) => m.type === 'ingreso'));
+    $('obraFilter').innerHTML = [['', 'Todas'], ['debe', 'Deben'], ['pagada', 'Pagadas']].map(([v, l]) => chip(l, S.obraFilter === v, 'obraFilter', v, 'sm')).join('');
+    const rows = S.clients.map((c) => Object.assign({ c }, clientTotals(c.id))).filter((r) => {
+      const debe = r.c.price - r.cob;
+      if (S.obraFilter === 'debe') return r.c.price > 0 && debe > 0;
+      if (S.obraFilter === 'pagada') return r.c.price > 0 && debe <= 0;
+      return true;
+    });
+    $('obras').innerHTML = !S.clients.length ? '<div class="sub">Todavía no hay clientes. Agregá uno desde el formulario con "+ Cliente".</div>'
+      : !rows.length ? '<div class="sub">No hay obras con este filtro.</div>'
+      : rows.map(({ c, mine, spent, cob }) => {
+      const debe = c.price - cob;
+      const tag = c.price <= 0 ? ['Sin presupuesto', C.mut] : debe > 0 ? ['Debe ' + fmt(debe), C.warn] : ['Pagada', C.accLt];
+      const cobW = c.price > 0 ? Math.min(100, Math.round(cob / c.price * 100)) : 0;
       const st = status(spent, c.budget);
-      return `<div class="brow"><div class="spread"><div style="font-size:15px;font-weight:600">${esc(c.name)}</div><div class="num" style="font-size:18px;color:${st.color}">${st.txt}</div></div>
+      const hoy = cob - spent, prev = c.price - Math.max(spent, c.budget);
+      return `<div class="brow" style="gap:10px">
+        <div class="spread"><div style="font-size:16px;font-weight:600">${esc(c.name)}</div><div style="font-size:13px;font-weight:600;color:${tag[1]};white-space:nowrap">${tag[0]}</div></div>
+        <div class="spread"><div class="lbl">Cobrado ${fmt(cob)} de ${fmt(c.price)}</div><div class="num" style="font-size:16px;color:var(--acc-lt)">${c.price > 0 ? cobW + '%' : ''}</div></div>
+        <div class="meter"><div style="width:${cobW}%;background:var(--acc-lt)"></div></div>
+        <div class="spread"><div class="lbl">Gastado ${fmt(spent)} de ${fmt(c.budget)}</div><div class="num" style="font-size:16px;color:${st.color}">${st.txt}</div></div>
         <div class="meter"><div style="width:${st.w}%;background:${st.color}"></div></div>
-        <div class="sub">Gastado ${fmt(spent)} de ${fmt(c.budget)} · Cobrado ${fmt(cob)}</div>
-        <div class="inline"><label class="lbl" for="b-${c.id}" style="white-space:nowrap">Presupuesto $</label><input class="inp" id="b-${c.id}" type="number" inputmode="decimal" min="0" value="${c.budget || ''}" data-budget="${c.id}" style="flex-grow:1;min-width:0">
-        ${mine.length ? '' : `<button type="button" class="btn sm" data-act="delClient" data-v="${c.id}" aria-label="Borrar cliente ${esc(c.name)}">Borrar</button>`}</div></div>`;
-    }).join('') : '<div class="sub">Todavía no hay clientes. Agregá uno desde el formulario con "+ Cliente".</div>';
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+          <div><div style="font-size:12px;color:var(--mut)">Ganancia hasta hoy</div><div class="num" style="font-size:18px;color:${hoy < 0 ? C.bad : C.tx}">${fmt(hoy)}</div></div>
+          <div><div style="font-size:12px;color:var(--mut)">Ganancia prevista</div><div class="num" style="font-size:18px;color:${prev < 0 ? C.bad : C.tx}">${c.price > 0 ? fmt(prev) : '—'}</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+          <div class="field" style="gap:4px"><label class="lbl" for="p-${c.id}">Presup. al cliente $</label><input class="inp" id="p-${c.id}" type="number" inputmode="decimal" min="0" value="${c.price || ''}" data-price="${c.id}" style="min-height:40px;border-radius:8px"></div>
+          <div class="field" style="gap:4px"><label class="lbl" for="b-${c.id}">Presup. de gastos $</label><input class="inp" id="b-${c.id}" type="number" inputmode="decimal" min="0" value="${c.budget || ''}" data-budget="${c.id}" style="min-height:40px;border-radius:8px"></div>
+        </div>
+        ${mine.length ? '' : `<button type="button" class="btn sm" data-act="delClient" data-v="${c.id}" aria-label="Borrar cliente ${esc(c.name)}" style="align-self:flex-start">Borrar obra</button>`}
+      </div>`;
+    }).join('');
 
     const cc = S.clients.some((c) => c.id === S.capClient) ? S.capClient : (S.clients[0] ? S.clients[0].id : '');
     $('capClientChips').innerHTML = S.clients.map((c) => chip(c.name, cc === c.id, 'capClient', c.id, 'sm')).join('');
     $('topes').innerHTML = cc ? GC.map((c) => {
       const spent = sum(S.movs.filter((m) => m.type === 'gasto' && m.client === cc && m.cat === c.id));
-      const cap = S.caps[c.id] || 0, st = status(spent, cap);
+      const cap = (S.caps[cc] || {})[c.id] || 0, st = status(spent, cap);
       return `<div class="brow"><div class="spread"><div style="font-size:15px;font-weight:600">${esc(c.label)}</div><div style="font-size:13px;font-weight:600;color:${st.color}">${st.txt}</div></div>
         <div class="meter"><div style="width:${st.w}%;background:${st.color}"></div></div>
-        <div class="inline"><div class="sub" style="flex-grow:1">Lleva ${fmt(spent)}</div><label class="lbl" for="cap-${c.id}">Tope $</label><input class="inp" id="cap-${c.id}" type="number" inputmode="decimal" min="0" value="${cap || ''}" data-cap="${c.id}" style="width:130px"></div></div>`;
+        <div class="inline"><div class="sub" style="flex-grow:1">Lleva ${fmt(spent)}</div><label class="lbl" for="cap-${c.id}">Tope $</label><input class="inp" id="cap-${c.id}" type="number" inputmode="decimal" min="0" value="${cap || ''}" data-cap="${c.id}" data-client="${cc}" style="width:130px"></div></div>`;
     }).join('') : '';
+    const capSum = $('capSum');
+    if (cc) {
+      const cl = S.clients.find((x) => x.id === cc), tot = GC.reduce((a, c) => a + ((S.caps[cc] || {})[c.id] || 0), 0);
+      capSum.hidden = false;
+      capSum.innerHTML = 'Suma de topes <b style="color:var(--tx)">' + fmt(tot) + '</b>' + (cl && cl.budget > 0 ? ' de un presupuesto de gastos de <b style="color:var(--tx)">' + fmt(cl.budget) + '</b>' + (tot > cl.budget ? ' <span style="color:var(--warn)">(los topes superan el presupuesto)</span>' : '') : '');
+    } else capSum.hidden = true;
   }
 
   function renderAll() {
@@ -600,6 +650,7 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
       case 'fCat': S.fCat = v; renderList(); break;
       case 'fClient': S.fClient = v; renderList(); break;
       case 'capClient': S.capClient = v; renderBudgets(); break;
+      case 'obraFilter': S.obraFilter = v; renderBudgets(); break;
       case 'edit': startEdit(v); break;
       case 'del': del(v); break;
       case 'delClient': sb.from('clientes').delete().eq('id', v).then(({ error }) => error ? fail(error, 'borrar cliente') : loadAll()); break;
@@ -616,12 +667,16 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
 
   document.addEventListener('change', async (e) => {
     const t = e.target;
-    if (t.dataset.budget) {
-      const { error } = await sb.from('clientes').update({ presupuesto: Math.max(0, Number(t.value) || 0) }).eq('id', t.dataset.budget);
-      if (error) return fail(error, 'presupuesto');
+    if (t.dataset.price) {
+      const { error } = await sb.from('clientes').update({ presupuesto: Math.max(0, Number(t.value) || 0) }).eq('id', t.dataset.price);
+      if (error) return fail(error, 'presupuesto al cliente');
+      loadAll();
+    } else if (t.dataset.budget) {
+      const { error } = await sb.from('clientes').update({ presupuesto_gastos: Math.max(0, Number(t.value) || 0) }).eq('id', t.dataset.budget);
+      if (error) return fail(error, 'presupuesto de gastos (¿corriste la migración en Supabase?)');
       loadAll();
     } else if (t.dataset.cap) {
-      const { error } = await sb.from('topes').upsert({ categoria: t.dataset.cap, tope: Math.max(0, Number(t.value) || 0) });
+      const { error } = await sb.from('topes_obra').upsert({ cliente_id: t.dataset.client, categoria: t.dataset.cap, tope: Math.max(0, Number(t.value) || 0) }, { onConflict: 'cliente_id,categoria' });
       if (error) return fail(error, 'tope');
       loadAll();
     }

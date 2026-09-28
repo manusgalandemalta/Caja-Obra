@@ -14,11 +14,12 @@ create table if not exists public.socios (
 create table if not exists public.clientes (
   id          uuid primary key default gen_random_uuid(),
   nombre      text not null,
-  presupuesto numeric(14,2) not null default 0 check (presupuesto >= 0),
+  presupuesto numeric(14,2) not null default 0 check (presupuesto >= 0),                -- lo que se le cobra al cliente
+  presupuesto_gastos numeric(14,2) not null default 0 check (presupuesto_gastos >= 0),  -- lo que se calcula gastar
   created_at  timestamptz not null default now()
 );
 
--- 3. Topes por categoría (por obra)
+-- 3. Topes por categoría — tabla vieja, ya no se usa (ver topes_obra al final)
 create table if not exists public.topes (
   categoria text primary key,
   tope      numeric(14,2) not null default 0 check (tope >= 0)
@@ -97,3 +98,27 @@ insert into public.topes (categoria, tope) values
   ('brian', 600000), ('changa', 300000), ('materiales', 1800000),
   ('viaticos', 200000), ('nafta', 300000), ('acopios', 600000)
 on conflict (categoria) do nothing;
+
+
+create table if not exists public.topes_obra (
+  cliente_id uuid not null references public.clientes(id) on delete cascade,
+  categoria  text not null,
+  tope       numeric(14,2) not null default 0 check (tope >= 0),
+  primary key (cliente_id, categoria)
+);
+
+alter table public.topes_obra enable row level security;
+drop policy if exists topes_obra_all on public.topes_obra;
+create policy topes_obra_all on public.topes_obra
+  for all to authenticated using (public.es_socio()) with check (public.es_socio());
+
+do $$
+begin
+  begin alter publication supabase_realtime add table public.topes_obra; exception when duplicate_object then null; end;
+end $$;
+
+insert into public.topes_obra (cliente_id, categoria, tope)
+select c.id, t.categoria, t.tope
+from public.clientes c cross join public.topes t
+where t.tope > 0
+on conflict (cliente_id, categoria) do nothing;
