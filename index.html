@@ -232,15 +232,6 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
     </section>
   </div>
 
-  <section class="card" aria-label="Respaldo">
-    <div><h2>Respaldo de datos</h2><div class="sub">Los datos viven en Supabase y se sincronizan solos entre los dos. Igual podés bajar un JSON de respaldo, o importar el que exportaste del lienzo de Claude.</div></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button type="button" class="btn dk" data-act="export">Exportar JSON</button>
-      <label class="btn" for="f-import" style="cursor:pointer">Importar JSON</label>
-      <input id="f-import" class="visually-hidden" type="file" accept="application/json,.json">
-    </div>
-    <div id="ioMsg" class="ok" role="status"></div>
-  </section>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -255,15 +246,16 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
     { id: 'changa', label: 'Días changa extra' },
     { id: 'materiales', label: 'Materiales' },
     { id: 'viaticos', label: 'Viáticos y almuerzos' },
+    { id: 'nafta', label: 'Nafta' },
     { id: 'acopios', label: 'Acopios' }
   ];
   const IC = [
     { id: 'adelanto', label: 'Pago adelantado' },
     { id: 'saldo', label: 'Pago saldo del trabajo' }
   ];
-  const SUBS = ['Soldar', 'Corralón', 'Hierros', 'Otros'];
+  const SUBS = ['Soldar', 'Corralón', 'Hierros', 'Ferretería', 'Otros'];
   const SOCIOS = ['DARIO', 'TOMAS'];
-  const PAL = ['#a8e0d9', '#72c5bb', '#4aa69b', '#33867d', '#236660'];
+  const PAL = ['#c9ece7', '#a8e0d9', '#72c5bb', '#4aa69b', '#33867d', '#236660'];
   const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   const MESL = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   const C = { acc: '#62bdb2', warn: '#e3a84b', bad: '#ee6b61', tx: '#e9ecee', mut: '#9ba6ae', accLt: '#9ad9d1' };
@@ -589,61 +581,6 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
     renderForm();
   }
 
-  // ---------- export / import ----------
-  function exportJson() {
-    const txt = JSON.stringify({
-      app: 'caja-obra', version: 2, exportedAt: new Date().toISOString(),
-      clients: S.clients, caps: S.caps,
-      movs: S.movs.map((m) => Object.assign({}, m, m.type === 'comp' ? { to: other(m.who) } : {}))
-    }, null, 2);
-    const url = URL.createObjectURL(new Blob([txt], { type: 'application/json' }));
-    const a = document.createElement('a'); a.href = url; a.download = 'caja-obra-' + today() + '.json';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 3000);
-    $('ioMsg').textContent = 'Listo, se descargó el respaldo.';
-  }
-
-  async function importJson(txt) {
-    const msg = (t) => { $('ioMsg').textContent = t; };
-    let d;
-    try { d = JSON.parse(txt); } catch (e) { return msg('El archivo no es un JSON válido.'); }
-    if (!d || !Array.isArray(d.movs) || !Array.isArray(d.clients)) return msg('Este JSON no parece un respaldo de la caja de obra.');
-    const movs = d.movs.filter((m) => m && m.date && ['gasto', 'ingreso', 'comp'].includes(m.type) && Number(m.amount) > 0);
-    if (!confirm(`Se van a AGREGAR ${d.clients.length} clientes y ${movs.length} movimientos a la base compartida. Los que ya están no se tocan. ¿Seguimos?`)) return;
-    msg('Importando…');
-    // clientes: si ya existe uno con el mismo nombre, se reutiliza
-    const idMap = {};
-    for (const c of d.clients) {
-      if (!c || !c.name) continue;
-      const found = S.clients.find((x) => x.name.trim().toLowerCase() === String(c.name).trim().toLowerCase());
-      if (found) { idMap[c.id] = found.id; continue; }
-      const { data, error } = await sb.from('clientes').insert({ nombre: String(c.name), presupuesto: Math.max(0, Number(c.budget) || 0) }).select().single();
-      if (error) return msg('Error creando clientes: ' + error.message);
-      idMap[c.id] = data.id;
-      S.clients.push({ id: data.id, name: data.nombre, budget: Number(data.presupuesto) || 0 });
-    }
-    if (d.caps && typeof d.caps === 'object') {
-      const rows = Object.keys(d.caps).filter((k) => GC.some((c) => c.id === k)).map((k) => ({ categoria: k, tope: Math.max(0, Number(d.caps[k]) || 0) }));
-      if (rows.length) { const { error } = await sb.from('topes').upsert(rows); if (error) return msg('Error con los topes: ' + error.message); }
-    }
-    const rows = movs.map((m) => toRow({
-      type: m.type, amount: Number(m.amount), cat: m.cat, sub: m.sub || '', date: String(m.date).slice(0, 10),
-      note: m.note || '', who: m.who === 'TOMAS' ? 'TOMAS' : 'DARIO', client: m.client ? (idMap[m.client] || '') : ''
-    })).filter((r) => r.tipo !== 'ingreso' || r.cliente_id);
-    for (let i = 0; i < rows.length; i += 500) {
-      const { error } = await sb.from('movimientos').insert(rows.slice(i, i + 500));
-      if (error) return msg('Error importando movimientos: ' + error.message);
-    }
-    msg(`Importados ${rows.length} movimientos.`);
-    loadAll();
-  }
-
-  $('f-import').addEventListener('change', (e) => {
-    const file = e.target.files && e.target.files[0]; if (!file) return;
-    const r = new FileReader(); r.onload = () => importJson(String(r.result || '')); r.readAsText(file);
-    e.target.value = '';
-  });
-
   // ---------- eventos ----------
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-act]'); if (!b) return;
@@ -673,7 +610,6 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
         $('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
         break;
       }
-      case 'export': exportJson(); break;
       case 'logout': sb.auth.signOut().then(() => location.reload()); break;
     }
   });

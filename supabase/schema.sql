@@ -95,5 +95,5 @@ on conflict (email) do update set nombre = excluded.nombre;
 
 insert into public.topes (categoria, tope) values
   ('brian', 600000), ('changa', 300000), ('materiales', 1800000),
-  ('viaticos', 200000), ('acopios', 600000)
+  ('viaticos', 200000), ('nafta', 300000), ('acopios', 600000)
 on conflict (categoria) do nothing;
