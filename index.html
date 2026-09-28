@@ -188,10 +188,34 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
       <div class="card kpi"><div class="k">Ingresos del mes</div><div class="num" style="font-size:40px;color:var(--acc-lt)" id="kIng">$ 0</div></div>
       <div class="card kpi"><div class="k">Gastos del mes</div><div class="num" style="font-size:40px" id="kGas">$ 0</div></div>
       <div class="card kpi" id="kQuedaCard"><div class="k">Queda</div><div class="num" style="font-size:48px;font-weight:700" id="kQueda">$ 0</div></div>
-      <div class="card kpi"><div class="k">Por cobrar (todas las obras)</div><div class="num" style="font-size:32px;color:var(--warn)" id="kCobrar">$ 0</div><div class="sub" id="kCobrarSub"></div></div>
+      <button type="button" class="card kpi" data-act="goDeben" style="text-align:left;font:inherit;color:inherit;cursor:pointer"><div class="spread" style="width:100%"><div class="k">Por cobrar (todas las obras)</div><div style="font-size:13px;color:var(--acc-lt)">Ver quién debe ›</div></div><div class="num" style="font-size:32px;color:var(--bad)" id="kCobrar">$ 0</div><div class="sub" id="kCobrarSub"></div></button>
       <div class="socios" id="socios"></div>
       <button type="button" class="btn ghost-acc" data-act="prefillSettle" id="settleBtn" hidden>Cargar esta compensación</button>
       <div style="font-size:12px;color:var(--mut2);padding:0 4px">Saldo de cada socio = lo que cobró − lo que pagó ± compensaciones del mes. "A mano" es cuando los dos quedan con el mismo saldo.</div>
+    </section>
+  </div>
+
+  <section class="card" aria-label="Movimientos del mes" style="gap:12px">
+    <div class="spread"><h2>Movimientos del mes</h2><div class="sub" id="listCount"></div></div>
+    <div class="field">
+      <div style="font-size:12px;color:var(--mut)">Categoría</div><div class="chips scroll" id="fCatChips"></div>
+      <div style="font-size:12px;color:var(--mut)">Cliente</div><div class="chips scroll" id="fClientChips"></div>
+    </div>
+    <div id="list"></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card" aria-label="Obras" id="obrasCard">
+      <div><h2>Obras: cobros y gastos</h2><div class="sub">Suma todos los meses. Cobrado contra lo presupuestado al cliente, y gastado contra el presupuesto de gastos.</div></div>
+      <div class="chips scroll" id="obraFilter"></div>
+      <div id="obras"></div>
+    </section>
+    <section class="card" aria-label="Topes por categoría">
+      <div><h2>Topes por categoría</h2><div class="sub">Cada obra tiene sus propios topes. Elegí la obra, cargá el tope de cada categoría y mirá cuánto lleva gastado en esa obra.</div></div>
+      <div class="chips scroll" id="capClientChips"></div>
+      <div id="topes"></div>
+      <div class="sub" id="capSum" hidden></div>
+      <div class="keyrow"><span><i style="background:var(--acc)"></i>En rango</span><span><i style="background:var(--warn)"></i>Más del 80%</span><span><i style="background:var(--bad)"></i>Pasado del tope</span></div>
     </section>
   </div>
 
@@ -211,30 +235,6 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
       <div class="bars" id="bars"></div>
       <div class="barlbls" id="barLbls"></div>
       <div class="sub" id="trend"></div>
-    </section>
-  </div>
-
-  <section class="card" aria-label="Movimientos del mes" style="gap:12px">
-    <div class="spread"><h2>Movimientos del mes</h2><div class="sub" id="listCount"></div></div>
-    <div class="field">
-      <div style="font-size:12px;color:var(--mut)">Categoría</div><div class="chips scroll" id="fCatChips"></div>
-      <div style="font-size:12px;color:var(--mut)">Cliente</div><div class="chips scroll" id="fClientChips"></div>
-    </div>
-    <div id="list"></div>
-  </section>
-
-  <div class="grid2">
-    <section class="card" aria-label="Obras">
-      <div><h2>Obras: cobros y gastos</h2><div class="sub">Suma todos los meses. Cobrado contra lo presupuestado al cliente, y gastado contra el presupuesto de gastos.</div></div>
-      <div class="chips scroll" id="obraFilter"></div>
-      <div id="obras"></div>
-    </section>
-    <section class="card" aria-label="Topes por categoría">
-      <div><h2>Topes por categoría</h2><div class="sub">Cada obra tiene sus propios topes. Elegí la obra, cargá el tope de cada categoría y mirá cuánto lleva gastado en esa obra.</div></div>
-      <div class="chips scroll" id="capClientChips"></div>
-      <div id="topes"></div>
-      <div class="sub" id="capSum" hidden></div>
-      <div class="keyrow"><span><i style="background:var(--acc)"></i>En rango</span><span><i style="background:var(--warn)"></i>Más del 80%</span><span><i style="background:var(--bad)"></i>Pasado del tope</span></div>
     </section>
   </div>
 
@@ -580,14 +580,14 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
       : !rows.length ? '<div class="sub">No hay obras con este filtro.</div>'
       : rows.map(({ c, mine, spent, cob }) => {
       const debe = c.price - cob;
-      const tag = c.price <= 0 ? ['Sin presupuesto', C.mut] : debe > 0 ? ['Debe ' + fmt(debe), C.warn] : ['Pagada', C.accLt];
+      const tag = c.price <= 0 ? ['Sin presupuesto', C.mut] : debe > 0 ? ['Debe ' + fmt(debe), C.bad] : ['Pagada', C.accLt];
       const cobW = c.price > 0 ? Math.min(100, Math.round(cob / c.price * 100)) : 0;
       const st = status(spent, c.budget);
       const hoy = cob - spent, prev = c.price - Math.max(spent, c.budget);
       return `<div class="brow" style="gap:10px">
         <div class="spread"><div style="font-size:16px;font-weight:600">${esc(c.name)}</div><div style="font-size:13px;font-weight:600;color:${tag[1]};white-space:nowrap">${tag[0]}</div></div>
-        <div class="spread"><div class="lbl">Cobrado ${fmt(cob)} de ${fmt(c.price)}</div><div class="num" style="font-size:16px;color:var(--acc-lt)">${c.price > 0 ? cobW + '%' : ''}</div></div>
-        <div class="meter"><div style="width:${cobW}%;background:var(--acc-lt)"></div></div>
+        <div class="spread"><div class="lbl">Cobrado ${fmt(cob)} de ${fmt(c.price)}${c.price > 0 && debe > 0 ? ' · <span style="color:var(--bad);font-weight:600">falta ' + fmt(debe) + '</span>' : ''}</div><div class="num" style="font-size:16px;color:var(--acc-lt)">${c.price > 0 ? cobW + '%' : ''}</div></div>
+        <div class="meter" style="display:flex;${c.price > 0 && debe > 0 ? 'background:rgba(238,107,97,.45)' : ''}"><div style="width:${cobW}%;background:var(--acc-lt);border-radius:999px 0 0 999px"></div></div>
         <div class="spread"><div class="lbl">Gastado ${fmt(spent)} de ${fmt(c.budget)}</div><div class="num" style="font-size:16px;color:${st.color}">${st.txt}</div></div>
         <div class="meter"><div style="width:${st.w}%;background:${st.color}"></div></div>
         <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
@@ -651,6 +651,7 @@ textarea.inp{padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13p
       case 'fClient': S.fClient = v; renderList(); break;
       case 'capClient': S.capClient = v; renderBudgets(); break;
       case 'obraFilter': S.obraFilter = v; renderBudgets(); break;
+      case 'goDeben': S.obraFilter = 'debe'; renderBudgets(); $('obrasCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); break;
       case 'edit': startEdit(v); break;
       case 'del': del(v); break;
       case 'delClient': sb.from('clientes').delete().eq('id', v).then(({ error }) => error ? fail(error, 'borrar cliente') : loadAll()); break;
